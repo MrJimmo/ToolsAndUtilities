@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<!--
+    MIT License
+
+    Copyright (c) 2023 Jim Moore
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+    -------------------------------------
+
+    DISCLAIMER: I make no claim, warranty, or otherwise guarantee that the
+    values and data produced by this page are in any way accurate and should
+    be considered more as entertainment.  In Short: Do not make life decisions
+    based on what it produces :o)
+
+    Description:
+    This no-frills page was born from me wanting to generate the entire payment
+    schedule for a loan, and produce details that matched up with the statements
+    I get from my bank.
+
+    There are a lot of online calculators that do this, but not many that
+    account for Adjustable Rate Mortgage (ARM) adjustments.  Those that do
+    account for ARM Interest bumps, didn't produce what I was expecting or in
+    one case, didn't even handle a 3 digit interest rate (ex. 3.125).
+
+    The payment schedule is meant to read left to write in a way that tells the
+    story of the loan at a given point, and show the flip for any interest rate
+    bumps as in the case for ARM loans that reach the "Adjustable" date and
+    interest rates have risen.
+
+    NOTE: Loan details used here are not the actual loan...mine are more
+    regrettable :o|
+
+    Example based on input (10 year ARM with max yearly 2% bump):
+    Date      LoanAmount    InterestRate  TermsInMonths
+    7/1/2013  260000.00     3.125         360
+    7/1/2023  -1            5.125        -1
+
+    -1 means "Calculate these based on previous values"
+
+    Resulting calculated Mortgage Details (extra columns pruned):
+
+    Date     LoanAmount  InterestRate    TermsInMonths   MonthlyPayment
+    7/1/2013 260000      3.125           360             1113.78
+    7/1/2023 198577.47   5.125           240             1324.27
+
+    And this will produce a payment schedule (a couple pulled from output here):
+
+    Term StatementDate PaymentDate  InterestRate Beginning Balance  Payment  Principal Interest  EndingBalance
+    1    8/1/2013      9/1/2013     3.125        260000             1113.78  436.70     677.08    259563.3
+
+    So it reads like this:
+    Term 1 covers August-September, and Payment of $1113.78 is due on Sept 1st.
+    The 3.125 rate is in effect, and with a beginning balance of $260,000 of the
+    principal left, you must pay $1113.78, of which $436.70 will be applied to
+    the principal and $677.08 is to pay for the interest on the loan. Once paid,
+    there will be $259,563.30 left in principal.  This will be the Beginning
+    balance of the next term...
+
+    Term StatementDate PaymentDate  InterestRate Beginning Balance  Payment  Principal Interest  EndingBalance
+    2    9/1/2013      10/1/2013     3.125       259563.30         1113.78   437.83    874.53    259125.47
+
+    And here's where the unpleasentness of the ARM kicks in (3.125 -> 5.125):
+    ...
+    120  7/1/2023      8/1/2023     3.125        199172.58         1113.78   595.1     518.68    198577.48
+    121  8/1/2023      9/1/2023     5.125        198577.47         1324.27   476.18    848.09    198101.29
+    ...
+
+    I set this up to also handle the very last payment, to cover any remainder
+    or overpay which should only be a few bucks at most.
+
+    Term StatementDate PaymentDate  InterestRate Beginning Balance  Payment  Principal Interest  EndingBalance
+    ...
+    359  6/1/2043      7/1/2043     5.125        2633.49            1324.27  1313.02   11.25     1320.47
+    360  7/1/2043      8/1/2043     5.125        1320.47            1326.11  1320.47   5.64      0
+
+    In this case a payment of 1313.02 would leave 1.84 remaining, so this final
+    payment is just increased to 1320.47 to completely pays off the principal,
+    thus leaving the Ending Balance == 0.00.
+
+    There's a console.log() call in that routine, showing how much the payment
+    was adjusted.  That could be promoted to some onscreen visual if important.
+
+    One thing I quickly noticed when putting this together was that values were
+    not lining up with my bank statements.
+
+    This is when I learned of "Bankers Rounding: Round to Even"
+    (Refs:  https://en.wikipedia.org/wiki/Rounding#Round_half_to_even and
+    https://www.mathsisfun.com/numbers/rounding-methods.html)
+
+    In Short, if a number you want to round ends in 5 and the next digit left is
+    even, round 'down', if next digit left is odd, round 'up' (which is the
+    nearest even)
+
+    Assuming the Number.prototype.round in this page is active, you can paste
+    the following into the browser Developer Tools console and observe the
+    results.
+
+    Examples
+        var x = 1.15;  console.log(x.round(1)) ==> 1.2
+        var x = 1.25;  console.log(x.round(1)) ==> 1.2
+        var x = 1.35;  console.log(x.round(1)) ==> 1.4
+        var x = 1.45;  console.log(x.round(1)) ==> 1.4
+        var x = 1.115; console.log(x.round(2)) ==> 1.12
+        var x = 1.125; console.log(x.round(2)) ==> 1.12
+        var x = 1.135; console.log(x.round(2)) ==> 1.14
+        var x = 1.145; console.log(x.round(2)) ==> 1.14
+
+    With this rounding in place, the generated values still drift and are off
+    by a few cents in various places.  This means for a given payment
+    it may differ from the bank by a few cents.  Out of a dozen or so online
+    calculators I tried, none produced results that matched the bank statements.
+    But, close enough.  Somewhere in the Banks calculation they are likely
+    using either more or less precision than what I'm doing.
+
+    Another lesson learned....I should have just gotten a 30 year fixed :o)
+
+    Copyright 2023 Jim Moore
+-->
+<html>
+<head>
+<title>Mortgage Payment Schedule</title>
+
+<style>
+.section-header {
+    font-weight: bold;
+};
+</style>
+
+<script language="javascript">
+
+// Array of Mortgage Details entries, parsed from the user entered Mortgage
+// Details Entry textarea.  Any "-1" columns will be calculated based on
+// previous values.
+var MortgageDetailsList = new Array();
+
+// Payment schedule generated based on the Mortgage Details.
+var MortgagePaymentSchedule = new Array();
+
+// Column headers for the various sections.  Enabling copy/paste to spreadsheet
+// apps or elsewhere.
+var HEADER_mortgageDetailsEntry      = ['Date', 'LoanAmount', 'InterestRate',
+                                        'TermsInMonths'];
+
+var HEADER_mortgageDetailsCalculated = ['Date', 'LoanAmount', 'InterestRate',
+                                        'TermsInMonths', 'MonthlyRate',
+                                        'CompoundInterest', 'PaymentMultiplier',
+                                        'MonthlyPayment'];
+
+var HEADER_mortgagePaymentSchedule   = ['Term', 'StatementDate', 'PaymentDate',
+                                        'InterestRate', 'Beginning Balance',
+                                        'Payment', 'Principal', 'Interest',
+                                        'CumulativePrincipal',
+                                        'CumulativeInterest', 'CumulativePaid',
+                                        'EndingBalance'];
+
+// Delimiter char that is used for the various outputs.
+// Radio button on UI causes this to be changed (CSV, TAB, etc.)
+var delimiterChar = '\t';
+
+// Unknown original source, I changed this to 10 digit precision and changed
+// variables to be more descript. This routine implements the
+// https://en.wikipedia.org/wiki/Rounding#Rounding_half_to_even rule.
+Number.prototype.round = function(places) {
+    var precision      = 10;
+    var value          = this * Math.pow(precision, places);
+    var valueRounded   = Math.round(value);
+    var bankersRounded = Math.abs(value) % 1 === 0.5 ? (valueRounded % 2 === 0
+                            ? valueRounded : valueRounded-1) : valueRounded;
+    return bankersRounded / Math.pow(10, places);
+}
+
+// This function simply adds "months" to "date"
+// Based on https://stackoverflow.com/questions/12793045/adding-months-to-a-date-in-javascript/12793246#12793246
+//
+// !!!NOTE: As implemented, this changes the data param, so if it's desired to
+// work as pass-by-value, this routine needs to produce a new Date() from the
+// date param.
+function addMonths(date, months) {
+    var day = date.getDate();
+
+    // Soln on S.O. shows "+months", but that short hand can be confusing, so
+    // I'm just using Number() here.
+    date.setMonth(date.getMonth() + Number(months));
+
+    // This check handles the case when date == Feb 29th.  Adding 12 makes it
+    // March 1 of the next (non leap) year, so getDate() will return 1,
+    // which won't match day (which would be 29).  Then the call to setDate(0)
+    // backs it up one, which should be Feb 28th, which would be most expected.
+    // To see example, addMonths(new Date(Date.parse('2024/02/29')) ,12)
+    // ...will return Feb 28, 2025 which is desired.
+    if (date.getDate() != day) {
+        date.setDate(0);
+    }
+
+    return date;
+}
+
+/*
+    This function calculates the monthly payment, based on interest Rate, Loan
+    Amount, and Term of loan (months)
+
+    Monthly Rate: 1200 is 12 * 100 Which converts the Interest from "n.nn%"
+    to 0.0nnn value and divides for months all in one step. Interest / 12 ==
+    monthly portion of interest. And since the Interest is given in n.nn%,
+    it's really n.nn / 100, so that's where the "*100" of the denominator
+    converts that to the 'real' percentage value.
+    Calculated as: [Interest] / 1200
+
+    Compound Interest: Compounding Interest over the life of the loan. "1+" so
+    that it's an increasing value (otherwise 0.nnnn to some power, would
+    just get smaller and smaller)
+    Calculated as: (1 + [Monthly Rate]) ^ [Term]
+
+    Multiplier Creates a multiplier, applied to principal to calculate monthly
+    payment.
+    Calculated as: ([Monthly Rate] * [Compound Interest])  / ([Compound
+    Interest] -1)
+
+    Monthly Payment Calculated as: [Original Amount] * [Multiplier]
+
+    Using Excels build in PMT Func: =PMT([Monthly Rate],[Term],-[Loan Amount])
+    ...should be equal to [Monthly Payment].  Was handy as verification during
+    page development.
+
+    NOTE: This routine isn't actually used, I used it during development, to
+    learn and verify. Along with the comments I added, I find useful, it's based
+    on formulas and comments in an Excel spreadsheet I created that did all this
+    manually....which made it a pain to tweak and play "What if?" scenarios.
+*/
+function calculateMonthlyPayment (Interest, loanAmount, Term) {
+
+    var MonthlyRate      = Interest / 1200.0;
+    var CompoundInterest = Math.pow((1.0 + MonthlyRate), Term);
+    var Multiplier       = ( MonthlyRate * CompoundInterest) /
+                            (CompoundInterest - 1);
+    var monthlyPayment   = (loanAmount * Multiplier);
+
+    return (monthlyPayment.round(2));
+}
+
+
+/*
+    This function calculates the future value of the loan after some number of
+    Periods.
+
+    B = A (1 + r)^n  -  (P/r)((1 + r)^n - 1)
+    B = Balance Amount
+    A = Starting Loan Amount
+    P = Payment Amount
+    r = Rate of Interest (MonthlyRate == Annual Rate / 1200)
+    n = Number of time periods (120)
+
+    Reference: https://byjus.com/loan-balance-formula/
+
+    Formula with variables as named in this function:
+    B = MortgageDetails.LoanAmount (1 + monthlyRate)^NumberOfPeriods  -
+        ((MortgageDetails.MonthlyPayment /monthlyRate) *
+        ((1 + monthlyRate)^NumberOfPeriods - 1))
+    B = FutureValue
+    A = MortgageDetails.LoanAmount
+    P = MortgageDetails.MonthlyPayment
+    r = monthlyRate
+    n = NumberOfPeriods
+
+    Excel formula to calculate the same thing:
+    =FV(r, MonthlyPayment, -LoanAmount, 0)  0 == end of period
+*/
+function futureValueAfterNumPeriods(MortgageDetails, NumberOfPeriods) {
+
+    var monthlyRate = MortgageDetails.InterestRate / 1200.0;
+
+    var FutureValue = (MortgageDetails.LoanAmount *
+        Math.pow((1.0 + monthlyRate), NumberOfPeriods)) -
+        ( (MortgageDetails.MonthlyPayment / monthlyRate) *
+        ( Math.pow((1 + monthlyRate), NumberOfPeriods) - 1));
+
+    return FutureValue.round(2);
+}
+
+
+/*
+    Simple function to handle difference between two dates, in months
+
+    var dt1 = new Date(Date.parse('2023/04/01'));
+    var dt2 = new Date(Date.parse('2023/04/30'));
+    calculateMonthsBetweenTwoDates(dt1,dt2)  ==> 0
+
+    dt2 = new Date(Date.parse('2023/05/31'));
+    calculateMonthsBetweenTwoDates(dt1,dt2)  ==> 1
+
+    dt2 = new Date(Date.parse('2023/06/01'));
+    calculateMonthsBetweenTwoDates(dt1,dt2)  ==> 2
+
+    dt2 = new Date(Date.parse('2023/01/01'));
+    calculateMonthsBetweenTwoDates(dt1,dt2)  ==> -3
+
+*/
+function calculateMonthsBetweenTwoDates(date1, date2) {
+   return (((date2.getFullYear() - date1.getFullYear()) * 12) -
+        date1.getMonth()) + date2.getMonth();
+}
+
+
+/*
+    MortgageDetails Class.
+
+    Date of Loan, Loan Amount, Interest Rate, and Terms in Months are
+    constructor parameters.
+
+    Monthly Rate, CompoundInterest, PaymentMultiplier, Monthly Payment are all
+    calculated based on the constructor param values.
+
+    In the case of ARM Mortgages, each interest rate bump essentially creates
+    a new loan based on remaining principal and how many terms are left,
+    so this class is applicable in those cases as well.
+*/
+function MortgageDetail(dtDateOfLoan, nLoanAmount, nInterestRate,
+    nTermsInMonths) {
+
+    this.DateOfLoan    = new Date(Date.parse(dtDateOfLoan));
+    this.LoanAmount    = parseFloat(nLoanAmount);
+    this.InterestRate  = parseFloat(nInterestRate);
+    this.TermsInMonths = parseInt(nTermsInMonths);
+
+    // 1200 is 12 * 100
+    // Which converts the Interest to 0.0nnnn value and divides for months all
+    // in one step.  Interest / 12 == monthly portion of interest.  And since
+    // the Interest is given in n.nn%, it's really n.nn / 100, so that's where
+    // the "*100" of the denominator converts that to the 'real' percentage
+    // value.
+    //
+    // Calculated as: [InterestRate] / 1200
+    this.MonthlyRate   = (this.InterestRate / 1200).round(9);
+
+    // Compounding Interest over the life of the loan.
+    // "1+" so that it's an increasing value (otherwise 0.nnnn to some power,
+    // would just get smaller and smaller)
+    //
+    // Calculated as: (1 + [MonthlyRate]) ^ [Term]
+    this.CompoundInterest = Math.pow( (1 + this.MonthlyRate),
+        this.TermsInMonths);
+
+    // Creates a multiplier, applied to principal to calculate monthly payment.
+    //
+    // Calculated as:
+    //      ([MonthlyRate] * [CompoundInterest])  / ([CompoundInterest] - 1)
+    this.PaymentMultiplier = (this.MonthlyRate * this.CompoundInterest) /
+        (this.CompoundInterest - 1)
+
+    // Calculated as: [LoanAmount] * [Multiplier], rounded to 2 decimal
+    // places.
+    //  this.MonthlyPayment = parseFloat((this.LoanAmount *
+    //                                    this.PaymentMultiplier).toFixed(2));
+    this.MonthlyPayment = (this.LoanAmount * this.PaymentMultiplier).round(2);
+}
+
+
+/*
+    Class definition for PaymentDetail, which will have similar details as a
+    monthly statement you might receive from your Mortgage company.
+*/
+function PaymentDetail(paymentTableIndex, mortgageDetail, monthInTerm,
+    cumulativePrincipal, cumulativeInterest, cumulativePaid) {
+
+    // Overall index in entire pay schedule(0-based)
+    this.PaymentTableIndex = paymentTableIndex;
+
+    // Simple plus 1, on Table Index to be human "readable" (not 0-based)
+    this.PaymentMonthIndex = this.PaymentTableIndex+1;
+
+    // Current Mortgage Detail this payment falls within
+    this.MortgageDetail  = mortgageDetail;
+
+    // Which month in the overal term of the current Mortgage details.
+    this.MonthInTerm  = monthInTerm;
+
+    // Usually shown on mortgage statements as "Statement Date"
+    this.StatementDate  = new Date(this.MortgageDetail.DateOfLoan);
+
+    // Due date of the mortgage payment.  Usually 1st of next month
+    this.PaymentDate  = this.StatementDate;
+
+    // Actual payment (tweaked for last payment, to cover remaining balance.
+    this.Payment = this.MortgageDetail.MonthlyPayment
+
+    // Calculated amount of this payment going towards the Interest
+    this.InterestPortionOfThisPayment  = 0.0;
+
+    // Calculated amount of this payment going towards the Principal
+    this.PrincipalPortionOfThisPayment = 0.0;
+
+    // This is the value as of previuos payment, this will be increased by
+    // Interest and Princpal that are calculated in this constructor.
+    this.CumulativePrincipal = cumulativePrincipal;
+    this.CumulativeInterest  = cumulativeInterest;
+    this.CumulativePaid      = cumulativePaid;
+
+    // Calculate Statement Date, which is the 1st of the month that this payment
+    // covers. In the statement you get from the Mortgage companies (Bank), it
+    // likely has 2 things like "Statement Date" and "Payment due date".  Where
+    // the due date is first of next month. An instance of this PaymentDetail
+    // willbe for Month N, and the Payment Date will be Month N+1
+    this.StatementDate = new Date( this.StatementDate.setMonth(
+        this.StatementDate.getMonth() + this.MonthInTerm));
+
+    // The Payment date is going to be on 1st of "Next month. Statement dates
+    // are assumed to be 1st day, though what appears on the statement from the
+    // mortgage company, may be 2nd or even 3rd day.
+    this.PaymentDate = new Date( this.PaymentDate.setMonth(
+        this.StatementDate.getMonth() + 1));
+
+    // LoanAmount  * ((1 + MontlyRate)^(M-1))
+    var PrincipalAtPreviousMonth = this.MortgageDetail.LoanAmount *
+        (Math.pow((1 + this.MortgageDetail.MonthlyRate),this.MonthInTerm-1));
+    PrincipalAtPreviousMonth = PrincipalAtPreviousMonth.round(2);
+
+    // MontlyPayment * ((    (( 1 + MonthlyRate)^(M-1)) - 1) / MonthlyRate))
+    var FutureValueAtPreviousMonth = this.Payment *
+        (((Math.pow((1 + this.MortgageDetail.MonthlyRate),this.MonthInTerm - 1))
+        - 1) / this.MortgageDetail.MonthlyRate );
+    FutureValueAtPreviousMonth = FutureValueAtPreviousMonth.round(2);
+
+    this.BeginningBalance = (PrincipalAtPreviousMonth -
+        FutureValueAtPreviousMonth).round(2);
+
+    this.InterestPortionOfThisPayment = (this.BeginningBalance *
+        this.MortgageDetail.MonthlyRate).round(2);
+
+    this.PrincipalPortionOfThisPayment = (this.Payment -
+        this.InterestPortionOfThisPayment).round(2);
+
+    this.EndingBalance = (this.BeginningBalance -
+        this.PrincipalPortionOfThisPayment).round(2);
+
+    this.CumulativePrincipal += this.PrincipalPortionOfThisPayment.round(2);
+    this.CumulativeInterest  += this.InterestPortionOfThisPayment.round(2);
+    this.CumulativePaid      += this.Payment.round(2);
+
+}
+
+
+// Simple enum into array of MortgageDetails, used to make easier to read code.
+const MortgageDetailsFields = {
+    DateOfLoan    : 0,
+    LoanAmount    : 1,
+    InterestRate  : 2,
+    TermsInMonths : 3
+}
+
+/*
+    This function handles creating MortgageDetail instances, based on the
+    entries in the Mortgate Details Entry text box. The first entry needs to
+    include Date, Loan Amount, Interest Rate, and Terms In Months. Subsequent
+    entries can have -1 for Loan Amount and Terms In Months, which indicate that
+    they should be calculated, based on the previous entry.  Most useful when
+    trying to model an Adjustable Rate Mortgage (ARM).
+
+    Example: $260k 10 year ARM starts at 3.125 Interst rate, with a term set at
+    360, and 3 rate bumps (max of 2% bump per year, with max at 5% total bump
+    (8.125).
+
+    Date        LoanAmount  InterestRate    TermsInMonths
+    8/1/2013    260000.00   3.125           360
+    8/1/2023    -1          5.125           -1
+    8/1/2024    -1          7.125           -1
+    8/1/2025    -1          8.125           -1
+
+    This will then get calculated as:
+    Date        LoanAmount  InterestRate    TermsInMonths    Monthly Payment
+    8/1/2013    260000.00   3.125           360              1113.78
+    8/1/2023    198577.47   5.125           240              1324.27
+    8/1/2024    192727.17   7.125           228              1544.93
+    8/1/2025    187759.68   8.125           216              1657.05
+
+    For a fixed rate, 30 year loan, there would be just one entry with all 4
+    values...
+
+    Date        LoanAmount  InterestRate    TermsInMonths
+    8/1/2013    260000.00   3.125           360
+
+    This will then get calculated as:
+    Date        LoanAmount  InterestRate    TermsInMonths    Monthly Payment
+    8/1/2013    260000.00   3.125           360              1113.78
+
+*/
+function GenerateMortgageDetailsCalculated() {
+    MortgageDetailsList = new Array();
+    var oMortgageDetails = document.getElementById(`txtMortgageDetailsEntry`);
+    if (oMortgageDetails == undefined) {
+        OutputStringToInfoBox(`Page Error: Failed to find Mortgage Details ` +
+        `Object`);
+        return;
+    }
+
+    var lines = oMortgageDetails.value.split('\n');
+    if (lines.length <= 0) {
+        OutputStringToInfoBox(`Data Error: Need to have at least one entry for `
+         + `loan`);
+        return;
+    }
+
+    // Quick and dirty way to skip header if present
+    if (lines[0].match(/(date|loanAmount|InterestRate|TermsInMonths)/gi)) {
+        lines.shift();
+    }
+
+    // Now process each line
+    for (var l = 0; l < lines.length; l++) {
+        var newRecord = lines[l].split(delimiterChar);
+        if (newRecord.length <= 1) {
+            continue;
+        }
+
+        // This is an entry that expects its Loan amount to be calculated based
+        // on previous entry. If no previous entry, this is a data error. There
+        // may be multiple interest rates specified for ARM loans, and this
+        // logic ensures the change in interest rate picks up where the previous
+        // rate finishes, which means there's some amount of loan left to pay.
+        if (newRecord[MortgageDetailsFields.LoanAmount] < 0) {
+
+            if (MortgageDetailsList.length < 1) {
+                OutputStringToInfoBox('DATA ERROR: Need to have a valid loan ' +
+                    'amount for at least the first entry');
+                return;
+            }
+
+            // Calculate number of terms (Months) left based on date of this
+            // new detail
+            var prevDetailDate = MortgageDetailsList[l-1].DateOfLoan;
+
+            var thisDetailDate = new Date(Date.parse(
+                    newRecord[MortgageDetailsFields.DateOfLoan]));
+
+            var monthsBetween  = calculateMonthsBetweenTwoDates(prevDetailDate,
+                thisDetailDate);
+
+            newRecord[MortgageDetailsFields.TermsInMonths] =
+                MortgageDetailsList[l-1].TermsInMonths - monthsBetween;
+
+            // Calculate the new Loan Amount based on this new interest rate and
+            // the calculated remaining terms
+            var prevLoanAmount        = MortgageDetailsList[l-1].LoanAmount;
+            var prevLoanMonthlyPayment= MortgageDetailsList[l-1].MonthlyPayment;
+            newRecord[MortgageDetailsFields.LoanAmount] =
+                futureValueAfterNumPeriods( MortgageDetailsList[l-1],
+                    monthsBetween);
+        }
+
+        MortgageDetailsList.push (new MortgageDetail(
+            newRecord[MortgageDetailsFields.DateOfLoan],
+            newRecord[MortgageDetailsFields.LoanAmount],
+            newRecord[MortgageDetailsFields.InterestRate],
+            newRecord[MortgageDetailsFields.TermsInMonths]));
+    }
+
+    OutputListOfCalculatedMortgagDetails(MortgageDetailsList);
+}
+
+
+/*
+    This function handles creating the list of payments across the entire loan
+    term.
+
+    Ex. 30 year term == 360 payments, described in 360 PaymentDetail records
+
+    It handles the case where there are rate changes within the loan lifetime,
+    such as during an ARM interest bump.
+*/
+function GeneratePaymentSchedule() {
+
+    // If the "Mortgage Details Calculated" haven't been calculated yet, call
+    // that routine first.
+    if (MortgageDetailsList.length <= 0) {
+        GenerateMortgageDetailsCalculated();
+    }
+
+    //Clear previous calculations
+    if (MortgagePaymentSchedule.length > 0) {
+        MortgagePaymentSchedule = new Array();
+    }
+
+    var currentMortgageDetailsIndex = 0;
+    var nextMortgageDetailsIndex = currentMortgageDetailsIndex + 1;
+
+    var currentMortgageDetails =
+         MortgageDetailsList[currentMortgageDetailsIndex];
+
+    var originalTotalTermsOfmortgage =
+        MortgageDetailsList[currentMortgageDetailsIndex].TermsInMonths;
+
+    var totalTermsOfMortgage = originalTotalTermsOfmortgage;
+
+    var cumulativePrincipal = 0.0;
+    var cumulativeInterest  = 0.0;
+    var cumulativePaid      = 0.0;
+
+    // Need to build list of payments based on original terms of loan
+    var monthInTerm = 1;
+    for (var month = 0; month < originalTotalTermsOfmortgage; month++) {
+
+        var newPaymentRecord = new PaymentDetail(month, currentMortgageDetails,
+            monthInTerm, cumulativePrincipal, cumulativeInterest,
+            cumulativePaid);
+
+        MortgagePaymentSchedule.push(newPaymentRecord);
+
+        cumulativePrincipal = newPaymentRecord.CumulativePrincipal;
+        cumulativeInterest  = newPaymentRecord.CumulativeInterest;
+        cumulativePaid      = newPaymentRecord.CumulativePaid;
+
+        // Check to see if there's more than one Mortgage Details (such as in
+        // the case of ARM loans) && we're not already on the last one.
+        if ((MortgageDetailsList.length > 1) &&
+            (nextMortgageDetailsIndex < MortgageDetailsList.length)) {
+
+            if (MortgageDetailsList[nextMortgageDetailsIndex].TermsInMonths ==
+                (totalTermsOfMortgage - monthInTerm)) {
+
+                // This was a hard bug to track down.
+                // Setting monthInTerm to 1 here like was done before entire
+                // routine started, caused a payment to get skipped, so setting
+                // monthInTerm to 0 here, the monthInTerm++ statement now brings
+                // it to the proper value of 1, and no payments are skipped.
+                monthInTerm = 0;
+
+                currentMortgageDetails =
+                    MortgageDetailsList[nextMortgageDetailsIndex];
+
+                totalTermsOfMortgage =
+                    MortgageDetailsList[nextMortgageDetailsIndex].TermsInMonths;
+
+                nextMortgageDetailsIndex++;
+            }
+        }
+        monthInTerm++;
+    }
+
+    /*
+    Due to mortgage details and rounding errors or just the details of the
+    mortgage, the final payment may result in 2 cases that require tweaking:
+        1) Monthly payment amount leaves a small amount unpaid.
+        2) Monthly payment amount is greater than remaining balance.
+
+    The following routine handles both cases, by adding the remaining principal
+    to the payment, and in #1 case, it adds, in #2 case, it'll be a negative
+    number, so adding will adjust appropriately.
+
+    It may actually be up to some loan and/or bank policy on how these scenarios
+    are handled (or if they do the adjustment automatically), but for this
+    calculator, the adjustment is made so term N finishes paying off the loan.
+    */
+    if (MortgagePaymentSchedule[MortgagePaymentSchedule.length-1].EndingBalance
+        != 0.00) {
+
+        var finalPaymentDetail =
+            MortgagePaymentSchedule[MortgagePaymentSchedule.length-1];
+
+        var remainderOfPrincipal = finalPaymentDetail.EndingBalance;
+
+        finalPaymentDetail.Payment += remainderOfPrincipal;
+
+        finalPaymentDetail.PrincipalPortionOfThisPayment +=remainderOfPrincipal;
+
+        finalPaymentDetail.EndingBalance = 0.0;
+
+        finalPaymentDetail.CumulativePrincipal += remainderOfPrincipal;
+
+        finalPaymentDetail.CumulativePaid += remainderOfPrincipal;
+
+        console.log(`Final payment has been adjusted by ${remainderOfPrincipal}`
+            + ` to ensure remaining principal = $0.00` );
+
+    }
+
+    OutputListOfScheduledPayments(MortgagePaymentSchedule);
+}
+
+
+/*
+    This function handles building each line of the Mortgage Details Calculated
+    textarea, by looping through all MortgageDetails in the MortgageDetailsList
+    array, and building each line, including the delimiter.
+*/
+function OutputListOfCalculatedMortgagDetails( mortgageDetails ) {
+    var calculatedLines = "";
+    var oMortgageDetailsCalculated =
+        document.getElementById('txtMortgageDetailsCalculated');
+
+    // If we've already caculated, clear and calculate again
+    if (oMortgageDetailsCalculated.value.length > 0) {
+        oMortgageDetailsCalculated.value = '';
+    }
+
+    // put check here for Space Padding and call "SpacePadded" version of output
+
+    for (var m = 0; m < mortgageDetails.length; m++) {
+        calculatedLines +=
+               `${(mortgageDetails[m].DateOfLoan.toLocaleDateString())}`
+            +  `${delimiterChar}`
+            +  `${mortgageDetails[m].LoanAmount.toFixed(2)}${delimiterChar}`
+            +  `${mortgageDetails[m].InterestRate}${delimiterChar}`
+            +  `${mortgageDetails[m].TermsInMonths}${delimiterChar}`
+            +  `${mortgageDetails[m].MonthlyRate}${delimiterChar}`
+            +  `${mortgageDetails[m].CompoundInterest}${delimiterChar}`
+            +  `${mortgageDetails[m].PaymentMultiplier}${delimiterChar}`
+            +  `${mortgageDetails[m].MonthlyPayment.toFixed(2)}`
+            +  `\n`;
+    }
+
+    oMortgageDetailsCalculated.value  =
+        `${HEADER_mortgageDetailsCalculated.join(delimiterChar)}\n`;
+
+    oMortgageDetailsCalculated.value += calculatedLines;
+}
+
+/*
+    This routine handles padding out the values/columns by spaces, which is
+    useful when copy/pasting into email or text document.
+
+    It's most useful for cases where you just want quick eye-ball friendly
+    formatting.
+
+    the two functions:
+    - OutputListOfCalculatedMortgagDetailsSpacePadded
+    - OutputListOfScheduledPaymentsSpacePadded
+
+    ...are very similar, and may benefit from some consolidating, but for
+    V.1 of this calculator, the current duplication is acceptable.
+*/
+function OutputListOfCalculatedMortgagDetailsSpacePadded(mortgageDetails) {
+
+    var records = [];
+
+    // First push the header row as the first 'record', because it's text
+    // counts towards calculating the max width for a given column.
+    records.push(HEADER_mortgageDetailsCalculated);
+
+    // Now loop through, pushing on each record of the actual details
+    for (var m = 0; m < mortgageDetails.length; m++) {
+        records.push( [
+            `${(mortgageDetails[m].DateOfLoan.toLocaleDateString())}`,
+            `${mortgageDetails[m].LoanAmount.toFixed(2)}`,
+            `${mortgageDetails[m].InterestRate}`,
+            `${mortgageDetails[m].TermsInMonths}`,
+            `${mortgageDetails[m].MonthlyRate}`,
+            `${mortgageDetails[m].CompoundInterest}`,
+            `${mortgageDetails[m].PaymentMultiplier}`,
+            `${mortgageDetails[m].MonthlyPayment.toFixed(2)}`
+        ]);
+    }
+
+    // vector to keep track of max width. fill(0) initializes each element to 0.
+    var maxWidthForColumn =
+        new Array(HEADER_mortgageDetailsCalculated.length).fill(0);
+
+    // Now, loop through the entire list of records, to determine max width.
+    for (var r = 0; r < records.length; r++) {
+        for (var col = 0; col < maxWidthForColumn.length; col++) {
+            if (maxWidthForColumn[col] < records[r][col].toString().length) {
+                maxWidthForColumn[col] = records[r][col].toString().length;
+            }
+        }
+    }
+
+    // Add appropriate padding for each column to be right-justified for the
+    // given column.
+    for (var r = 0; r < records.length; r++){
+        for (var col = 0; col < maxWidthForColumn.length; col++) {
+            // This simply repeats a space for the difference between current
+            // column and the max. If we're on the record with the max width
+            // column value, this will result in nothing being added.
+            records[r][col] =
+                `${' '.repeat(maxWidthForColumn[col] - records[r][col].length)}`
+                +`${records[r][col]}`;
+        }
+    }
+
+    // TBD:
+    // Need to figure out way to column align decimal values so they decimal
+    // lines up, even if the value has less digits than longest. Would really
+    // only apply to columns with several decimal places like MonthlyRate,
+    // CompundInterest, and PaymentMultiplier.
+
+    var oMortgageDetailsCalculated =
+        document.getElementById('txtMortgageDetailsCalculated');
+
+    oMortgageDetailsCalculated.value = "";
+    for (var r = 0; r < records.length; r++){
+        oMortgageDetailsCalculated.value += `${records[r].join('  ')}\n`;
+    }
+
+}
+
+// Called from button onClick handler, to reformat as spaced padded
+function PadMortgageDetailsCalcualtedWithSpaces() {
+    OutputListOfCalculatedMortgagDetailsSpacePadded(MortgageDetailsList);
+}
+
+
+/*
+    This function handles building each line of the Payment schedule textarea,
+    by looping through all PaymentDetails in the MortgagePaymentSchedule array.
+*/
+function OutputListOfScheduledPayments(payments) {
+
+    var output = '';
+
+    output = `${HEADER_mortgagePaymentSchedule.join(delimiterChar)}\n`;
+
+    for (var p = 0; p < payments.length; p++) {
+        var payment = payments[p];
+        output += `${payment.PaymentMonthIndex}`;
+        output += `${delimiterChar}${payment.StatementDate
+            .toLocaleDateString()}`;
+        output += `${delimiterChar}${payment.PaymentDate.toLocaleDateString()}`;
+        output += `${delimiterChar}${payment.MortgageDetail.InterestRate
+            .round(3)}`;
+        output += `${delimiterChar}${payment.BeginningBalance.toFixed(2)}`;
+        output += `${delimiterChar}${payment.Payment.toFixed(2)}`;
+        output += `${delimiterChar}${payment.PrincipalPortionOfThisPayment
+            .toFixed(2)}`;
+        output += `${delimiterChar}${payment.InterestPortionOfThisPayment
+            .toFixed(2)}`;
+        output += `${delimiterChar}${payment.CumulativePrincipal.round(2)
+            .toFixed(2)}`;
+        output += `${delimiterChar}${payment.CumulativeInterest.round(2)
+            .toFixed(2)}`;
+        output += `${delimiterChar}${payment.CumulativePaid.round(2)
+            .toFixed(2)}`;
+        output += `${delimiterChar}${payment.EndingBalance.round(2)
+            .toFixed(2)}`;
+        output += `\n`;
+    }
+
+    var oPaymentSchedule = document.getElementById('txtPaymentSchedule');
+
+    oPaymentSchedule.value = output;
+}
+
+/*
+    This routine handles padding out the values/columns by spaces, which is
+    useful when copy/pasting into email or text document.
+
+    It's most useful for cases where you just want quick eye-ball friendly
+    formatting.
+
+    the two functions:
+    - OutputListOfCalculatedMortgagDetailsSpacePadded
+    - OutputListOfScheduledPaymentsSpacePadded
+
+    ...are very similar, and may benefit from some consolidating, but for
+    V.1 of this calculator, the current duplication is acceptable.
+*/
+function OutputListOfScheduledPaymentsSpacePadded(paymentSchedule) {
+
+    var records = [];
+
+    // First push the header row as the first 'record', because it's text
+    // counts towards calculating the max width for a given column.
+    records.push(HEADER_mortgagePaymentSchedule);
+
+    // Now loop through, pushing on each record of the actual details
+    for (var m = 0; m < paymentSchedule.length; m++) {
+        records.push( [
+            `${paymentSchedule[m].PaymentMonthIndex}`,
+            `${paymentSchedule[m].StatementDate.toLocaleDateString()}`,
+            `${paymentSchedule[m].PaymentDate.toLocaleDateString()}`,
+            `${paymentSchedule[m].MortgageDetail.InterestRate.round(3)}`,
+            `${paymentSchedule[m].BeginningBalance.toFixed(2)}`,
+            `${paymentSchedule[m].Payment.toFixed(2)}`,
+            `${paymentSchedule[m].PrincipalPortionOfThisPayment.toFixed(2)}`,
+            `${paymentSchedule[m].InterestPortionOfThisPayment.toFixed(2)}`,
+            `${paymentSchedule[m].CumulativePrincipal.round(2).toFixed(2)}`,
+            `${paymentSchedule[m].CumulativeInterest.round(2).toFixed(2)}`,
+            `${paymentSchedule[m].CumulativePaid.round(2).toFixed(2)}`,
+            `${paymentSchedule[m].EndingBalance.round(2).toFixed(2)}`
+        ]);
+    }
+
+    // vector to keep track of max width. fill(0) initializes each element to 0.
+    var maxWidthForColumn =
+        new Array(HEADER_mortgagePaymentSchedule.length).fill(0);
+
+    // Now, loop through the entire list of records, to determine max width.
+    for (var r = 0; r < records.length; r++) {
+        for (var col = 0; col < maxWidthForColumn.length; col++) {
+            if (maxWidthForColumn[col] < records[r][col].toString().length) {
+                maxWidthForColumn[col] = records[r][col].toString().length;
+            }
+        }
+    }
+
+    // Now the messy bit.  Add appropriate padding for each column to be right-
+    // justified for the given column.
+    for (var r = 0; r < records.length; r++){
+        for (var col = 0; col < maxWidthForColumn.length; col++) {
+            // This simply repeats a space for the difference between current
+            // column and the max. If we're on the record with the max width
+            // column value, this will result in nothing being added.
+            records[r][col] =
+                `${' '.repeat(maxWidthForColumn[col] - records[r][col].length)}`
+               +`${records[r][col]}`;
+        }
+    }
+
+    var oPaymentSchedule = document.getElementById('txtPaymentSchedule');
+
+    oPaymentSchedule.value = "";
+    for (var r = 0; r < records.length; r++){
+        oPaymentSchedule.value += `${records[r].join('  ')}\n`;
+    }
+
+}
+
+// Called from button onClick handler, to reformat as spaced padded
+function PadPaymentScheduleWithSpaces() {
+    OutputListOfScheduledPaymentsSpacePadded(MortgagePaymentSchedule);
+}
+
+/*
+    Function to change the delimiter character of a given object value.
+
+    obj      : In this page, it's one of the 3 Textareas.
+    fromChar : Current delimiter char
+    toChar   : char to replace fromChar with.
+
+    HACK: This should probably just re-run the appropriate "Generate" function
+          which would cause the details to be output appropriately.
+          Though this routine is also called for the Mortgage Details Entry
+          text area, which is user inputed which is not auto generated.
+*/
+function convertListFieldDelimiter(obj, fromChar, toChar) {
+    if (obj === undefined) {
+        console.log(`[convertListFieldDelimiter] Called with invalid object:`
+                    +` ${obj.toString()}`);
+    }
+
+    var rxReplacement = new RegExp(`${fromChar}`,`gi`);
+    obj.value = obj.value.replace(rxReplacement,toChar);
+}
+
+/*
+    onChange handler for the CSV and TAB radio button group.
+
+    Handles calling convertListFieldDelimiter for each of the 3 Textareas.
+*/
+function onRadioOutputDelimChange() {
+    outputDelimiter = document.querySelector(
+       'input[type="radio"][name=outputDelimiter]:checked').value.toLowerCase();
+
+    // Ths is a bit of a hack, but if the "Pad With Spaces" button was pressed
+    // there won't be any commas or tabs in the Mortgage Details Calculated and
+    // Payment Schedule text areas, so if neither of those delimiters exist,
+    // call the 2 functions to regenerate the data, and the rest of this
+    // routine will do the 'right' thing, and convert to the chosen delimiter.
+    var objMortgageDetailsCalculated =
+        document.getElementById(`txtMortgageDetailsCalculated`);
+
+    var objPaymentSchedule = document.getElementById(`txtPaymentSchedule`);
+
+    // If the mortgage details have been calculated but is not in CSV or TAB
+    // delimited format, re-generate (which will reformat with current delim).
+    if ( (objMortgageDetailsCalculated.value.length > 0) &&
+         (!objMortgageDetailsCalculated.value.match(/(,|\t)/gi)) ){
+        GenerateMortgageDetailsCalculated();
+    }
+
+    // If payment schedule has been but is not in CSV or TAB delimited format,
+    // re-generate (which will reformat with current delim).
+    if ( (objPaymentSchedule.value.length > 0) &&
+         (!objPaymentSchedule.value.match(/(,|\t)/gi)) ){
+        GeneratePaymentSchedule();
+    }
+
+    // Now do the delm flip.
+    var oldChar = delimiterChar;
+    if ("csv" == outputDelimiter) {
+        delimiterChar = ',';
+    } else if ("tab" == outputDelimiter) {
+        delimiterChar = '\t';
+    }
+
+    convertListFieldDelimiter(document.getElementById(`txtMortgageDetailsEntry`)
+        ,oldChar, delimiterChar);
+
+    convertListFieldDelimiter(objMortgageDetailsCalculated,oldChar,
+        delimiterChar);
+
+    convertListFieldDelimiter(objPaymentSchedule, oldChar, delimiterChar);
+
+    console.log(`Delimeter is now: ${delimiterChar.charCodeAt(0)}`);
+}
+
+
+/*
+    Function to handle copying text in given textarea object to clipboard.
+
+    based on
+    https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+*/
+function copyTextAreaToClipboard(objTextArea) {
+    if (objTextArea === undefined) {
+        console.log(`[copyTextAreaToClipboard] called with invalid object.`);
+        return;
+    }
+
+    var textToCopy = objTextArea.value;
+
+    if (textToCopy.length <= 0) {
+        console.log(`Nothing to copy`);
+        return;
+    }
+
+    navigator.clipboard.writeText(textToCopy).then( ()=> {
+        console.log(`Copied ${textToCopy.length} chars from ${objTextArea.id} to clipboard`);
+    }, function(err) {
+        console.error('Copy to clipboard failed: ', err);
+    });
+}
+
+
+/*
+    Function that handles setting things up when the page loads.
+*/
+function bodyOnLoad() {
+
+    var defaultDetails =
+        [
+            [ "7/1/2013", "260000.00", "3.125", "360"],
+            [ "7/1/2023", "-1", "5.125", "-1"],
+            [ "7/1/2024", "-1", "7.125", "-1"],
+            [ "7/1/2025", "-1", "8.125", "-1"]
+        ];
+    var oMortgageDetails = document.getElementById('txtMortgageDetailsEntry');
+
+    document.getElementById('txtMortgageDetailsEntry').value =
+        `${HEADER_mortgageDetailsEntry.join(delimiterChar)}\n`;
+
+    // Fill the Mortgage Details Entry textarea with the defaults.
+    for (var i = 0; i < defaultDetails.length; i++) {
+        oMortgageDetails.value += `${defaultDetails[i].join(delimiterChar)}\n`;
+    }
+
+    // Show the headers for each text area, along side the title
+    document.getElementById('txtMortgageDetailsEntryColumnNames').innerText =
+        `[${HEADER_mortgageDetailsEntry.join('],[')}]`;
+
+    document.getElementById('txtMortgageDetailsCalculatedColumnNames').innerText
+        = `[${HEADER_mortgageDetailsCalculated.join('],[')}]`;
+
+    document.getElementById('txtPaymentScheduleColumnNames').innerText =
+        `[${HEADER_mortgagePaymentSchedule.join('],[')}]`;
+}
+
+
+/*
+    Simple function to set inner text of a DIV to given string.
+    Used mostly for early development, but also some entry errors.
+*/
+function OutputStringToInfoBox(str) {
+    var oInfoBox = document.getElementById('divInfoBox');
+    oInfoBox.innerText = str;
+}
+
+</script>
+</head>
+<body onload="bodyOnLoad();">
+
+<div id="divInfoBox" style="width:100%;height:1.5em"></div>
+<span class="section-header">Output Delimiter:</span>
+
+<!-- Output delimiter radio buttons-->
+<input type="radio" onchange="onRadioOutputDelimChange();"
+    name="outputDelimiter" id="OutputDelimiterCSV" value="CSV">CSV</input>
+<input type="radio" onchange="onRadioOutputDelimChange();"
+    name="outputDelimiter" id="OutputDelimiterTAB" value="TAB"
+    checked="checked">TAB</input>
+<p></p>
+
+<span class="section-header">Mortgage Details Entry: </span>
+
+<span id="txtMortgageDetailsEntryColumnNames"></span>
+
+<textarea id="txtMortgageDetailsEntry" rows="6" style="width:100%"></textarea>
+<hr>
+
+<!-- Mortgage Details Calculated -->
+<button id="btnGenerateMortgageDetailsCalculated"
+    onclick="GenerateMortgageDetailsCalculated();">Generate Mortgage Details
+    Calculated</button>
+<button id="btnCopyCalculatedMortgageDetailsToClipboard"
+    onclick="copyTextAreaToClipboard(
+        document.getElementById('txtMortgageDetailsCalculated'));">
+        Copy To Clipboard</button>
+<button id="btnPadMortgageDetailsCalcualtedWithSpaces"
+    onclick="PadMortgageDetailsCalcualtedWithSpaces();">Pad With Spaces</button>
+<br>
+
+<span class="section-header">Mortgage Details Calculated: </span>
+<span id="txtMortgageDetailsCalculatedColumnNames"></span>
+<textarea id="txtMortgageDetailsCalculated" rows="6" style="width:100%">
+</textarea>
+<hr>
+
+<!-- Payment Schedule -->
+<button id="btnGeneratePaymentSchedule" onclick="GeneratePaymentSchedule();">
+    Generate Payment Schedule</button>
+<button id="btnCopyPaymentScheduleToClipboard"
+    onclick="copyTextAreaToClipboard(
+        document.getElementById('txtPaymentSchedule'));">
+        Copy To Clipboard</button>
+<button id="btnPadPaymentScheduleWithSpaces"
+    onclick="PadPaymentScheduleWithSpaces();">Pad With Spaces</button>
+<br>
+
+<span class="section-header">Payment Schedule:</span>
+<span id="txtPaymentScheduleColumnNames"></span>
+<textarea id="txtPaymentSchedule" rows="40" style="width:100%"></textarea>
+
+</body>
