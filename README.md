@@ -8,3 +8,7 @@ A No-frills page born from wanting to generate the entire payment schedule for a
 I used to get those handy little small calendars from places like Les Schwab.
 
 I whipped this page together to generate a year in the format I like the most.  I then use a paper cutter to cut them out and then staple them to some thicker cardboard, so I end up with the current year including the holidays highlighted accurately.
+
+Supports "year" and "horizontal" URL params.
+
+Example: [GenerateCalendar.html?year=2020&horizontal](https://mrjimmo.com/ToolsAndUtilities/GenerateCalendar/GenerateCalendar.html?year=2020&horizontal)
