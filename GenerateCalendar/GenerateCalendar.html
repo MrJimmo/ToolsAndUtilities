@@ -25,10 +25,10 @@
     -----
     Description:
 
-    I used to get those small little calendars various places (ex. Les Schwab)
-    would hand out and I'd put them in my vehicle, on my desk, etc.
+    I used to get those handy little small calendars from places like
+    Les Schwab.
 
-    I whipped this page together, to generate a year in the format I liked the
+    I whipped this page together to generate a year in the format I like the
     most.  I then use a paper cutter to cut them out and then staple them to
     some thicker cardboard, so I end up with the current year including the
     holidays highlighted accurately.
@@ -37,6 +37,18 @@
 
     This page supports a "year=<YEAR>" URL param, so it can generate the
     the calendar for that <YEAR>
+
+    Supported Keyboard shortcuts:
+    "R" == Reset to current year
+    "O" == Toggle Horizontal/Vertical orientation
+    "H" == Set to Horizontal orientation
+    "V" == Set to Vertical orientation
+    [Left/Right]Arrow == Back/Forward 1 year
+    Control+[Left/Right]Arrow == Back/Forward by 5 years at a time
+    Shift+[Left/Right]Arrow == Back/Forward by 10 years at a time
+
+    Each of these key presses causes the calendar to be regenerated.
+    The H/V keys are a bit redundant/unecessary given that "O" toggles anyway.
 
     Example:
         GenerateCalendar.html?year=1970
@@ -152,6 +164,10 @@
 </style>
 
 <script language=javascript>
+
+// Globals for Year and Orientation
+var g_currentYear          = (new Date()).getFullYear();
+var g_fVerticalOrientation = false; // Default; Show horizontal
 
  // Array of Month names, used in first line of calendar
 var MONTH_LONG_NAMES   = ['January', 'February' , 'March', 'April', 'May',
@@ -452,37 +468,22 @@ function buildCalendar(dtCalendar, holidays) {
 /*
     This function is called from page load and handles looping through 12
     months, calling BuildCalendar.
-
-    This function also checks the location.search string for possible params
-    that will be used to build the calendar, such as orientation and year.
  */
 function generateCalendar() {
-
-    var year = (new Date()).getFullYear(); //Default to current year
-    var fVertical = true; // Default to 4 rows by 3 cols
-
-    if (location.search) {
-        var rxYear = /year=(?<YEAR>\d*)/gi;
-        var m  = rxYear.exec(location.search);
-        if (m && m.groups && m.groups.YEAR)  {
-            year = m.groups.YEAR;
-        }
-
-        if (location.search.match(/horizontal/gi)){
-            fVertical = false;
-        }
-    }
-
     // Popluate holidays array with calculated holidays
-    g_holidays = calculateHolidayDatesForYear(year);
+    g_holidays = calculateHolidayDatesForYear(g_currentYear);
+
+    // Clear out any previously generated calendar.
+    var container = document.getElementById('year-container');
+    container.innerHTML = "";
+    container.className = "year-container";
 
     // Loop through, generating all 12 months.
     // The CSS class applied to the year-container DIV determins the orientation
     for (var month = 0; month < 12; month++){
-        var newCalendar = buildCalendar(new Date(year, month), g_holidays);
-        var container = document.getElementById('year-container');
+        var newCalendar = buildCalendar(new Date(g_currentYear, month), g_holidays);
         container.appendChild(newCalendar);
-        if (fVertical) {
+        if (g_fVerticalOrientation) {
             container.classList.add('year-container-vertical');
         } else {
             container.classList.add('year-container-horizontal');
@@ -577,11 +578,82 @@ function initializeHolidayDates(holidays) {
     }
 }
 
+
+/*
+    Function that handles the keypresses
+*/
+function onKeyDown(e) {
+    var fRebuildCalendar = false;
+    var year_step = 1;
+
+    // Adjust the year stepping value depending on Shift or Ctrl key state.
+    if (e.shiftKey) {
+        year_step = 10;
+    } else if (e.ctrlKey) {
+        year_step = 5;
+    }
+
+    // Right-Arrow increases year by year_step
+    if (e.code == "ArrowRight") {
+        g_currentYear += year_step;
+        fRebuildCalendar = true;
+
+    // Left-Arrow decrease year by year_step
+    } else if (e.code == "ArrowLeft") {
+        g_currentYear -= year_step;
+        fRebuildCalendar = true;
+
+    // Set the orientation to horizontal if "H" key pressed.
+    } else if (e.code == "KeyH") {
+        g_fVerticalOrientation = false;
+        fRebuildCalendar = true;
+
+    // Set the orientation to verticle if "V" key pressed.
+    } else if (e.code == "KeyV") {
+        g_fVerticalOrientation = true;
+        fRebuildCalendar = true;
+
+    // Toggle Orientation when "O" key is pressed.
+    // Kind of makes the H and V handlers redundant.
+    } else if (e.code == "KeyO") {
+        g_fVerticalOrientation = !g_fVerticalOrientation;
+        fRebuildCalendar = true;
+
+    // Reset the year to current year.
+    } else if (e.code == "KeyR") {
+        g_currentYear = (new Date()).getFullYear();
+        fRebuildCalendar = true;
+    }
+
+    // Rebuild if a key pressed that caused a modification necessitating rebuild
+    if ( fRebuildCalendar ) {
+        generateCalendar();
+    }
+}
+
+document.addEventListener("keydown", onKeyDown);
+
 /*
     Hookup Calendar generation for when the page loads.
+
+    This function also checks the location.search string for possible params
+    that will be used to build the calendar, such as orientation and year.
 */
 window.addEventListener('DOMContentLoaded', function() {
-    // Create date grid
+
+    if (location.search) {
+        var rxYear = /year=(?<YEAR>\d*)/gi;
+        var m  = rxYear.exec(location.search);
+        if (m && m.groups && m.groups.YEAR)  {
+            g_currentYear = parseInt(m.groups.YEAR);
+        }
+
+        if (location.search.match(/horizontal/gi)){
+            g_fVerticalOrientation = false;
+        }
+    }
+
+    // Create the calendar
     generateCalendar();
 });
 
