@@ -9,6 +9,18 @@ I used to get those handy little small calendars from places like Les Schwab.
 
 I whipped this page together to generate a year in the format I like the most.  I then use a paper cutter to cut them out and then staple them to some thicker cardboard, so I end up with the current year including the holidays highlighted accurately.
 
+Supported Keyboard shortcuts:
+
+|Key|Action|
+|-|-|
+|R|Reset to current year|
+|O|Toggle Horizontal/Vertical orientation|
+|H|Set to Horizontal orientation|
+|V|Set to Vertical orientation|
+|[Left/Right]Arrow|Back/Forward 1 year|
+|Control+[Left/Right]Arrow|Back/Forward by 5 years at a time|
+|Shift+[Left/Right]Arrow|Back/Forward by 10 years at a time|
+
 Supports "year" and "horizontal" URL params.
 
 Example: [GenerateCalendar.html?year=2020&horizontal](https://mrjimmo.com/ToolsAndUtilities/GenerateCalendar/GenerateCalendar.html?year=2020&horizontal)
