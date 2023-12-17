@@ -24,3 +24,15 @@ Supported Keyboard shortcuts:
 Supports "year" and "horizontal" URL params.
 
 Example: [GenerateCalendar.html?year=2020&horizontal](https://mrjimmo.com/ToolsAndUtilities/GenerateCalendar/GenerateCalendar.html?year=2020&horizontal)
+
+
+## [HaveIBeenPwned Utility](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/HaveIBeenPwned)
+This Powershell script handles calling the [HaveIBeenPwned](https://haveibeenpwned.com/) api to check for password occurrences in security breaches.
+
+Handles simple Password (or Hash) query, or processes an file input.
+
+See more info in the [Readme.md](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/HaveIBeenPwned/Readme.md)
+
+Example:
+
+` .\HaveIBeenPwned.ps1 -Password "pa$$word" -LogLevel Verbose`
