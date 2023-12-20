@@ -1,0 +1,6 @@
+# Ignore common Save directory
+HashFiles/
+
+# Ignore any hash files saved. Would rather have [0-9a-fA-F]{5}.txt but
+# apparently can't do that.
+[0-9a-fA-F]*.txt

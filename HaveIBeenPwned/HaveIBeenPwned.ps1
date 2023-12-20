@@ -291,6 +291,7 @@ class PasswordDetails {
     [string]$UserName
     [string]$Password
     [string]$SHA1Hash
+    [int]$HashHitCount
 
     # Called when -Password or -SHA1 params specified
     PasswordDetails([string]$password, [string]$hash) {
@@ -336,25 +337,28 @@ class PasswordDetails {
         }
 
         $this.SHA1Hash = $hash
+
+        $this.HashHitCount = 0
     }
 
     # Basic stringification of an instance values.
     [string] toString() {
-        $group_name  = if ($this.GroupName -eq "")
-                        {$global:defaultStringValue} else {$this.GroupName}
-        $group_title = if ($this.Title -eq "")
-                        {$global:defaultStringValue} else {$this.Title}
-        $user_name   = if ($this.UserName -eq "")
-                        {$global:defaultStringValue} else {$this.UserName}
-        $pword       = if ($this.Password -eq "")
-                        {$global:defaultStringValue} else {$this.Password}
-        $hash        = if ($this.SHA1Hash -eq "")
-                        {$global:defaultStringValue} else {$this.SHA1Hash}
-        $str = "$group_name, $group_title, $user_name, $pword, $hash"
+        $group_name    = if ($this.GroupName -eq "")
+                            {$global:defaultStringValue} else {$this.GroupName}
+        $group_title   = if ($this.Title -eq "")
+                            {$global:defaultStringValue} else {$this.Title}
+        $user_name     = if ($this.UserName -eq "")
+                            {$global:defaultStringValue} else {$this.UserName}
+        $pword         = if ($this.Password -eq "")
+                            {$global:defaultStringValue} else {$this.Password}
+        $hash          = if ($this.SHA1Hash -eq "")
+                            {$global:defaultStringValue} else {$this.SHA1Hash}
+        $hash_hit_count = $this.HashHitCount
+        $str ="$group_name, $group_title, $user_name, $pword, $hash, " +
+            "$hash_hit_count"
 
         return $str;
     }
-
 }
 
 <#
@@ -441,31 +445,36 @@ function Check-Website-For-Hash($hash) {
 
     .PARAMETER hash
     Full hash of password
+
+    .OUTPUTS
+    The number of hits for the given hash.
+
 #>
 function Search-Results-For-Hash($lines, $hash) {
     # ToUpper not needed for actual check, but visually more consistent in
     # console output
     $lastPartOfHash = $hash.Substring(5).toUpper()
 
-    Write-Out "lastPartOfHash: $lastPartOfHash" `
+    Write-Out "Searching for: $lastPartOfHash" `
         -level:$global:validLoggingLevels.Verbose
+
+    $HashHitCount = 0
 
     foreach($line in $lines) {
         # Mainly just useful for dev and debugging.
         # Uncomment the following to see all the <HASH>:<COUNT> lines returned
-        # Write-Out "line: $line" `
-        #     -level:$global:validLoggingLevels.Verbose
+        # Write-Out "line: $line" -level:$global:validLoggingLevels.Verbose
 
         # NOTE: -eq is case insensitive
-        $hashFromWebsite = $line.Split(':')[0];
+        $hashFromWebsite = $line.split(':')[0]
         if ($hashFromWebsite -eq $lastPartOfHash) {
-            return $true
+            $HashHitCount = [int]$line.split(":")[1]
+            break
         }
     }
 
-    return $false
+    return $HashHitCount
 }
-
 
 <#
     .DESCRIPTION
@@ -604,7 +613,7 @@ function Write-Content-To-File($content, $firstFiveSHAChars) {
     Write-Out ("Saving contents (length:{0} bytes) to {1}" `
         -f $content.length, $filename) -level:$global:validLoggingLevels.Verbose
 
-    $content | Out-File -FilePath $filename -Force
+    $content | Out-File -FilePath $filename -Force -Encoding UTF8
 
     Write-Out ("Wrote {0} bytes to {1}" `
         -f $content.length, $filename) -level:$global:validLoggingLevels.Verbose
@@ -742,22 +751,23 @@ try {
 
         $contentLines = ($content -split "\n")
 
-        Write-Out ("Received {0} lines" -f $lines.length)
+        Write-Out ("Received {0} lines" -f $contentLines.length)
 
         Write-Out ("Checking {0} lines of results for hash: {1} (  {2}  )" -f `
-            $lines.length, $entry.SHA1Hash, $entry.Password)
+            $contentLines.length, $entry.SHA1Hash, $entry.Password)
 
-        $found = (Search-Results-For-Hash -lines:$contentLines `
+        $HashHitCount = (Search-Results-For-Hash -lines:$contentLines `
             -hash:$entry.SHA1Hash)
 
         # Found a hit amongst the results, output in rude colors.
-        if ($found -eq $true) {
-            Write-Out "$('*'*80)" `
+        if ($HashHitCount -gt 0) {
+            $entry.HashHitCount = $HashHitCount
+            Write-Out "$('+'*80)" `
                 -level:$global:validLoggingLevels.Minimum `
                 -include_timestamp:$false
             Write-Host "`t$($entry.toString())" -BackgroundColor red `
                 -ForegroundColor black
-            Write-Out "$('*'*80)" `
+            Write-Out "$('+'*80)" `
                 -level:$global:validLoggingLevels.Minimum `
                 -include_timestamp:$false
             $pwndPasswords += $entry
@@ -769,7 +779,7 @@ try {
         }
 
         # Show a simple visual of time remaining in the sleep
-        # The 'trick' here is to use -NoNewLine nad a string that starts with `r
+        # The 'trick' here is to use -NoNewLine and a string that starts with `r
         $sleepCountdown = $RequestSleep
         while( ($sleepCountdown -gt 0) -and `
                ($entry -ne $listOfPasswords[$listOfPasswords.length -1])) {
@@ -786,14 +796,10 @@ try {
         Write-Out ("`tList of passwords found on HaveIBeenPwned.com [{0}]" `
             -f $pwndPasswords.length)
         Write-Out "$('-'*80)"
-        Write-Out "$('*'*80)" `
-            -level:$global:validLoggingLevels.Minimum `
-            -include_timestamp:$false
         foreach($pwnd in $pwndPasswords) {
             Write-Host "$($pwnd.toString())" -BackgroundColor red `
                 -ForegroundColor black
         }
-        Write-Out "$('*'*80)" `
     }
 
 } catch [Exception] {
