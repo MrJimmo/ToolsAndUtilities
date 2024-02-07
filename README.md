@@ -36,13 +36,3 @@ See more info in the [Readme.md](https://github.com/MrJimmo/ToolsAndUtilities/tr
 Example:
 
 ` .\HaveIBeenPwned.ps1 -Password "pa$$word" -LogLevel Verbose`
-
-## [MITMProxy Capture HTTP Traffic Add-on](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/WebTraffic/MITMProxyCaptureTraffic)
-
-This is a [MITMProxy](https://mitmproxy.org/) addon that saves HTTP requests and responses to local storage.
-
-MITMProxy reference: [https://docs.mitmproxy.org/stable/addons-overview/](https://docs.mitmproxy.org/stable/addons-overview/)
-
-
-
-
