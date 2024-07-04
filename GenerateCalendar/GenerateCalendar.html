@@ -594,33 +594,33 @@ function onKeyDown(e) {
     }
 
     // Right-Arrow increases year by year_step
-    if (e.key == "ArrowRight") {
+    if (e.code == "ArrowRight") {
         g_currentYear += year_step;
         fRebuildCalendar = true;
 
     // Left-Arrow decrease year by year_step
-    } else if (e.key == "ArrowLeft") {
+    } else if (e.code == "ArrowLeft") {
         g_currentYear -= year_step;
         fRebuildCalendar = true;
 
     // Set the orientation to horizontal if "H" key pressed.
-    } else if (e.key == "KeyH") {
+    } else if (e.code == "KeyH") {
         g_fVerticalOrientation = false;
         fRebuildCalendar = true;
 
     // Set the orientation to verticle if "V" key pressed.
-    } else if (e.key == "KeyV") {
+    } else if (e.code == "KeyV") {
         g_fVerticalOrientation = true;
         fRebuildCalendar = true;
 
     // Toggle Orientation when "O" key is pressed.
     // Kind of makes the H and V handlers redundant.
-    } else if (e.key == "KeyO") {
+    } else if (e.code == "KeyO") {
         g_fVerticalOrientation = !g_fVerticalOrientation;
         fRebuildCalendar = true;
 
     // Reset the year to current year.
-    } else if (e.key == "KeyR") {
+    } else if (e.code == "KeyR") {
         g_currentYear = (new Date()).getFullYear();
         fRebuildCalendar = true;
     }
