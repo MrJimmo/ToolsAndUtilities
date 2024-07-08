@@ -58,7 +58,7 @@ And 10 files are shorter, maybe 3-5min (short1, short2, ..., short10)
 
 Below are pictures and tables to try and help explain the processing...
 
-All files sorted by length, descending:
+All files sorted by length, descending:<br>
 ![img](./content/AllFilesSortedLengthDescending.png)<br>
 Figure A<br>
 _Long files colored Orange to illustrate_
@@ -79,7 +79,7 @@ _Long files colored Orange to illustrate_
 |short1|10000|
 
 Next, the buckets are created (LONG files are randomized), and each bucket is filled in with files below bucket threshold
-
+<br>
 ![img](./content/BucketsFilledBucketsDescending.png)<br>
 Figure B<br>
 _(Shown with the Y-axis as logrithmic scale, to make it easier to visualize._)
@@ -99,7 +99,7 @@ _(Shown with the Y-axis as logrithmic scale, to make it easier to visualize._)
 |short5|50000|
 |short1|10000|
 
-And finally, the files with in each bucket are randomized amongst themselves.
+And finally, the files with in each bucket are randomized amongst themselves.<br>
 ![img](./content/BucketsFilledBucketsRandomized.png)<br>
 Figure C<br>
 _(Shown with the Y-axis as logrithmic scale, to make it easier to visualize._)
