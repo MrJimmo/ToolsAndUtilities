@@ -36,3 +36,15 @@ See more info in the [Readme.md](https://github.com/MrJimmo/ToolsAndUtilities/tr
 Example:
 
 ` .\HaveIBeenPwned.ps1 -Password "pa$$word" -LogLevel Verbose`
+
+## [Windows Media Player Playlist Tool](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/PlaylistTool)
+Simple tool that reads a Windows Media Player Playlist XML file and distributes the media files into 'buckets' defined by the media files that are greater than some threshold in length, and the 'buckets' contain the shorter files.
+
+See more info in the [Readme.md](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/PlaylistTool/Readme.md)
+
+```
+Example usage:
+
+python playlisttool.py -p "test.wpl" -d -c -o out.csv -v -w NewPlayList.wpl
+```
+This will consume playlist file "test.wpl", distribute the files, and output the results to the given out.csv and create a new playlist file called NewPlayList.wpl"

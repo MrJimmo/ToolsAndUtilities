@@ -145,10 +145,11 @@ Execution Notes:
         pip install beautifulsoup4 lxml
 
 Example usage:
-    python playlisttool.py -p "test.wpl" -d -c -o out.csv -v
+    python playlisttool.py -p "test.wpl" -d -c -o out.csv -v -w NewPlayList.wpl
 
-    This will consume plalist file test.wpl, distribute the files, and
-    output the results to the given out.csv
+    This will consume playlist file "test.wpl", distribute the files, and
+    output the results to the given out.csv and create a new playlist file
+    called "NewPlayList.wpl"
 
 Reference:
     https://en.wikipedia.org/wiki/Windows_Media_Player_Playlist
