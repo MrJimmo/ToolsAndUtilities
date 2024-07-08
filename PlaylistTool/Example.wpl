@@ -1,0 +1,21 @@
+<?wpl version="1.0"?>
+<smil>
+    <head>
+        <meta name="Generator" content="Microsoft Windows Media Player -- 12.0.19041.3636"/>
+        <meta name="ItemCount" content="8"/>
+        <author>The Author</author
+        <title>Example WMP Playlist file</title>
+    </head>
+    <body>
+        <seq>
+            <media src="C:\Music\files\file1.wma" cid="536F7272-792C-206E-6F20-626967207365" tid="63726574-7320-6865-7265-2E206161610A" />
+            <media src="C:\Music\files\file2.wma" cid="49206372-6561-7465-6420-746865736520" tid="47554944-7320-6173-2072-65706C616365" />
+            <media src="C:\Music\files\file3.wma" cid="6D656E74-7320-666F-7220-74686F736520" tid="63726561-7465-6420-6F6E-206D79206D61" />
+            <media src="C:\Music\files\file4.wma" cid="6368696E-6520-6A75-7374-20696E206361" tid="73652074-6865-7920-7765-7265206C6561" />
+            <media src="C:\Music\files\file5.wma" cid="6B696E67-2061-6E79-2069-6E666F2E0A41" tid="6E642079-6573-2C20-7769-746820612035" />
+            <media src="C:\Music\files\file6.wma" cid="31322063-6861-7220-6C69-6D697420666F" tid="72207468-6520-3820-4755-4944732C2069" />
+            <media src="C:\Music\files\file7.wma" cid="7420746F-6F6B-206D-6520-6120636F7570" tid="6C652074-7269-6573-2074-6F2067657420" />
+            <media src="C:\Music\files\file8.wma" cid="74686973-206D-6573-7361-6765206A7573" tid="742E2E2E-2E2E-2E72-6967-6874203A6F29" />
+        </seq>
+    </body>
+</smil>
