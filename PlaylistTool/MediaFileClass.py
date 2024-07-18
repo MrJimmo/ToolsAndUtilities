@@ -53,14 +53,15 @@ class MediaFileClass:
 
     # Constructor
     def __init__(self, media_entry):
-        self.file_size  = -1
-        self.length     = ""
-        self.lengthMS   = 0
-        self.bit_rate   = ""
-        self.cid        = ""
-        self.tid        = ""
-        self.media_elem = media_entry
-        self.file_name  = self.media_elem['src']
+        self.file_size     = -1 # -1 == unknown size.
+        self.length        = ""
+        self.lengthMS      = 0
+        self.bit_rate      = ""
+        self.cid           = ""
+        self.tid           = ""
+        self.media_elem    = media_entry
+        self.file_name     = self.media_elem['src']
+        self.bucket_number = -1 # -1 means not part of a bucket
 
         if (self.media_elem.has_attr('cid')):
             self.cid  = media_entry['cid']
@@ -165,13 +166,22 @@ class MediaFileClass:
 
             self.lengthMS = totalSeconds * 1000
 
-        # Attempt to 'fix' the length, for files that have a length of 0
-        # 24 is based on average ratio of Size:Length of most files.
-        # (Just to make clear; it's not "24 hours", it's 24:1 ratio)
-        # It works for the purpose of this tool, as it doesn't have to be
-        # that accurate and an estimate is ok.
+        # HACK HACK HACK
+        # Attempt to 'fix' the length, for files that have a length of 0 (or no
+        # value in "Length" column)
+        #
+        # The factor used is just a quick check against apps that show
+        # length (but Explorer shows blank for "Length" and "kbps" columns).
+        #
+        # Factor was calculated as:
+        # (Length_Shown_In_VLC_Converted_to_Milliseconds / FileSize_Bytes)
+        # (1h:58m:33s * 1000) ==> 7,113,000ms / 113,815,552 = 0.062495
+        #
+        # Out of all files I have, only 1 doesn't show any value in Length
+        # column, so I don't really care to solve this problem yet for the
+        # more general case.
         if (self.lengthMS <= 0):
-            self.lengthMS = 24 * self.file_size
+            self.lengthMS = int(0.062495 * self.file_size)
 
         # Just an FYI.  I've only found 1 file without this value
         # This routine might be too noisy, if OS version doesn't have a bitrate

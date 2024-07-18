@@ -153,6 +153,39 @@ Example usage:
 
 Reference:
     https://en.wikipedia.org/wiki/Windows_Media_Player_Playlist
+
+
+usage: playlisttool.py [-h] [-a] [-b BUCKET_THRESHOLD] [-c] [-d]
+    [-o OUTPUT_FILENAME] -p PLAYLIST_FILE [-r] [-t PLAYLIST_TITLE] [-v]
+    [-w WPL_FILE]
+
+Playlist Tool
+
+options:
+  -h, --help            show this help message and exit
+  -b BUCKET_THRESHOLD, --bucket-threshold BUCKET_THRESHOLD
+                        Bucket threshold (in ms). Smaller number here will
+                        produce more buckets, larger value will produce fewer
+                        buckets.
+  -c, --csv             When this switch is present, output is csv.
+  -d, --distribute-files
+                        When this switch is present, a new list is created with
+                        the songs distributed according to length.
+  -o OUTPUT_FILENAME, --output-file OUTPUT_FILENAME
+                        Name of file for output. This is execution output, not
+                        the the name of the new playlist file. Use -w/--wpl-file
+                        param to specify the new WPL file name.
+  -p PLAYLIST_FILE, --playlist-file PLAYLIST_FILE
+                        Name of playlist file to process.
+  -r, --remove-bad-files
+                        Remove any bad files found (really just ignores them)
+                        Does not remove from storage.
+  -t PLAYLIST_TITLE, --title PLAYLIST_TITLE
+                        Specify the title for the new playlist (if -w is
+                        specified)
+  -v, --verbose         Enable for verbose output
+  -w WPL_FILE, --wpl-file WPL_FILE
+                        Name of new wpl file to create.
 '''
 
 
@@ -323,6 +356,8 @@ def distribute_list(mediaFiles, length_threshold):
 
     new_list = []
 
+    bucket_number = 0
+
     # Fill the new_list array with the files that are longer than the threshold
     for boundary_song in mediaFiles:
         if (boundary_song.lengthMS >= length_threshold):
@@ -332,7 +367,10 @@ def distribute_list(mediaFiles, length_threshold):
             # as tweaks to the algorithm are made.
             # boundary_song.file_name = "XXXXXXX{0}"
             #   .format(boundary_song.file_name)
+            boundary_song.bucket_number = "{0}".format(bucket_number)
             new_list.append(boundary_song)
+            bucket_number += 1
+
 
     # Shuffle to randomly distributes the bucket boundary entries.
     random.shuffle(new_list)
@@ -352,8 +390,12 @@ def distribute_list(mediaFiles, length_threshold):
     # Optimize by skipping the first len(new_list) files,
     # TODO: change this to use range instead of just "in"
     for short_song in media_files:
-        if (short_song.lengthMS <= length_threshold):
+        if (short_song.lengthMS < length_threshold):
             # Insert just after the current boundary
+            short_song.bucket_number = new_list[
+                boundary_indices[current_boundary_index]].bucket_number
+            debug_print("[distribute_list] short_song.bucket_number = {0}".
+                format(short_song.bucket_number))
             new_list.insert(boundary_indices[current_boundary_index]+1,
                             short_song)
 
@@ -505,27 +547,29 @@ form that can be opened in Excel or other spreadsheet/CSV aware app.
 '''
 def output_as_csv(mediaFiles):
     global options
-    header ="Index,filename,size,lengthMS"
+    header ="Index,filename,size,lengthMS,BucketNumber"
 
     def write_to_console():
         print(header)
         for file in mediaFiles:
-            print('"{0}",{1},{2}'.
-                format(file.file_name, file.file_size, file.lengthMS))
+            line = ('"{0}",{1},{2},{3}'.
+                format(file.file_name, file.file_size, file.lengthMS,
+                       file.bucket_number))
+            print(line)
 
     def write_to_file(file):
         with open(options.output_filename, 'w') as csvFile:
             csvFile.writelines(header+"\n")
             for file in mediaFiles:
-                csvFile.write('{0},"{1}",{2},{3}\n'.
+                line = ('{0},"{1}",{2},{3},{4}\n'.
                     format(file.originalOrder, file.file_name, file.file_size,
-                           file.lengthMS))
+                           file.lengthMS, file.bucket_number))
+                csvFile.write(line)
 
     if (len(options.output_filename) > 0):
         write_to_file(options.output_filename)
     else:
         write_to_console()
-
 
 '''
 write_new_playlist
@@ -617,7 +661,7 @@ Output the params and their values.
 '''
 def output_options():
     global options
-    output_string('[===== Playlist Tool  ===========]')
+    output_string('[=========== Playlist Tool  ===========]')
     output_string('Playlist File     : {0}'.format(options.playlist_file))
     output_string('New Playlist File : {0}'.format(options.wpl_file))
     output_string('Bucket Threshold  : {0}'.format(options.bucket_threshold))
