@@ -48,3 +48,6 @@ Example usage:
 python playlisttool.py -p "test.wpl" -d -c -o out.csv -v -w NewPlayList.wpl
 ```
 This will consume playlist file "test.wpl", distribute the files, and output the results to the given out.csv and create a new playlist file called NewPlayList.wpl"
+
+## [Chrome Preference Tool](https://github.com/MrJimmo/ToolsAndUtilities/tree/main/ChromePrefsTool)
+Simple script to read the Preferences file for Chrome (and MS Edge) and list or export the scripts that live in the DevTools Snippets tab.
