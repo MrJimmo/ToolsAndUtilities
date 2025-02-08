@@ -42,7 +42,7 @@ usage: chromeprefs.py [-h] -i INPUT_FILE [-o OUTPUT_DIRECTORY] [-n SCRIPT_NAME_P
 
 ## Example
 ```
-python chromeprefs.py -i "C:/Users/Foo/AppData/Local/Google/Chrome/User Data Default/Preferences" -l -n ".*Scratch.* -c -s -o ./Snippets
+python chromeprefs.py -i "C:/Users/Foo/AppData/Local/Google/Chrome/User Data/Default/Preferences" -l -n ".*Scratch.*" -c -s -o ./Snippets
 
 This will list all the names of the snippets that contain "Scratch" string in their name and will show the the contents as well as save them to /Snippets directory.
 ```
